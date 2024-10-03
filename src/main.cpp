@@ -11,12 +11,15 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include "model.hpp"
+#include "view.hpp"
+#include "controller.hpp"
 
 enum class SortKey
 {
     none = 0,
     bytes = 1,
-    pakets_per_second = 2
+    packets_per_second = 2
 };
 
 struct Config
@@ -68,7 +71,7 @@ Config parseArgs(int argc, char *argv[])
                 }
                 else if (key == "p")
                 {
-                    config.sort_key = SortKey::pakets_per_second;
+                    config.sort_key = SortKey::packets_per_second;
                 }
                 else
                 {
@@ -123,6 +126,15 @@ int main(int argc, char *argv[])
     // Run app with given config
     std::cout << "Interface: " << config.interface << std::endl;
     std::cout << "Sort key: " << int(config.sort_key) << std::endl;
+
+    application::Model model;
+    application::View view;
+    application::Controller controller(model, view);
+
+    int status_code = controller.run_app();
+
+    return status_code;
+
 
 
     return 0;
