@@ -1,6 +1,6 @@
 CXX=g++
 CXX_FLAGS=-Wall -Werror -Wextra -pedantic
-LD_FLAGS=-lncurses
+LD_FLAGS=-lncurses -lpcap
 QUIET=@
 APP=isa-top
 SRC=src
