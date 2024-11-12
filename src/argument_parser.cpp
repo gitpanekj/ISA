@@ -13,6 +13,8 @@ Config parseArgs(int argc, char *argv[])
     config.sort_key = SortKey::BYTES;
     bool sort_key_set = false;
     bool iface_set = false;
+    bool out_set = false;
+    config.outDirector = "";
 
     for (int i = 1; i < argc; i++)
     {
@@ -62,6 +64,24 @@ Config parseArgs(int argc, char *argv[])
             else
             {
                 throw std::invalid_argument("Missing sort key after -s");
+            }
+        }
+        else if (arg == "-d")
+        {
+            if (out_set)
+            {
+                throw std::invalid_argument("Output directory already specified");
+            }
+            if (i < (argc - 1))
+            {
+                std::string key = argv[++i];
+                config.outDirector = key;
+                config.out = true;
+                out_set = true;
+            }
+            else
+            {
+                throw std::invalid_argument("Missing directory path after -d");
             }
         }
     }

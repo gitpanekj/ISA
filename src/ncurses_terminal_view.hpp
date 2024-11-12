@@ -6,6 +6,7 @@
 
 int  start_ui();
 void update_view(std::list<std::pair<FlowKey, FlowStats>> data);
+void write_window_to_file(const std::string &filename);
 int  stop_ui();
 
 #endif

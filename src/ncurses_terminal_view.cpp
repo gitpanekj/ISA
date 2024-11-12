@@ -34,9 +34,12 @@ NOTE: if width < 16 dont show proto and Tx
 #define TX "%-*.*s%-*.*s%.0s%.0s%.0s%-6s   %-6s"
 #define CLEAR "%-*.*s%-*.*s%.0s%.0s%.0s%.0s"
 
-int cnt = 0;
 
-void write_window_to_file(WINDOW *win, const std::string &filename) {
+
+void write_window_to_file(const std::string &out) {
+    static int cnt = 0;
+    std::string filename = out + "/" + "out-" + std::to_string(cnt) + ".txt";
+    cnt++;
     std::ofstream outfile(filename, std::ios::app);
     if (!outfile) {
         return;
@@ -44,15 +47,12 @@ void write_window_to_file(WINDOW *win, const std::string &filename) {
 
     char buffer[2048];
     int rows, cols;
-    getmaxyx(win, rows, cols);
+    getmaxyx(stdscr, rows, cols);
 
-    // Write each line to the file
     for (int i = 0; i < rows; ++i) {
-        mvwinstr(win, i, 0, buffer);
+        mvwinstr(stdscr, i, 0, buffer);
         outfile << buffer << std::endl;
     }
-
-    outfile << "----------\n";  // Separator between captures
     outfile.close();
 }
 
@@ -159,9 +159,6 @@ void update_view(std::list<std::pair<FlowKey, FlowStats>> records)
         print_table(records, SRC_DST_PROTO_RX_TX, (screen_width - 48) / 2);
     }
     refresh();
-
-    std::string filename = "out-" + std::to_string(cnt++) + ".txt";
-    write_window_to_file(stdscr, filename);
 }
 
 int start_ui()

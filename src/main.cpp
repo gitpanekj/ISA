@@ -11,7 +11,7 @@
 #include "flow_monitor.hpp"
 #include "flow_table.hpp"
 #include "ncurses_terminal_view.hpp"
-#include "argument_parse.hpp"
+#include "argument_parser.hpp"
 
 // Shared data - application state
 bool running = true;
@@ -56,6 +56,9 @@ int main(int argc, char *argv[])
         {
             view_data = monitor.get_data();
             update_view(view_data);
+            if (config.out){
+                write_window_to_file(config.outDirector);
+            }
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
 

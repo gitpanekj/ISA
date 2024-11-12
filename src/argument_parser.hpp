@@ -8,6 +8,8 @@ struct Config
     const char* interface; // required
     SortKey sort_key;
     bool help = false;
+    bool out = false;
+    std::string outDirector; 
 };
 
 
