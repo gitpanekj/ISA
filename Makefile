@@ -4,9 +4,8 @@ LD_FLAGS=-lncurses -lpcap
 QUIET=@
 APP=isa-top
 SRC=src
-OBJ=obj
 SRCS=$(wildcard $(SRC)/*.cpp)
-OBJS=$(patsubst $(SRC)/%.cpp, $(OBJ)/%.o, $(SRCS))
+OBJS=$(patsubst $(SRC)/%.cpp, $(SRC)/%.o, $(SRCS))
 
 .PHONY: clean
 
