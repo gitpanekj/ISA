@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <list>
-#include <stdint.h> // TODO: c++ equivalent??
+#include <cstdint>
 #include <mutex>
 #include <memory>
 

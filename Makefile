@@ -3,9 +3,8 @@ CXX_FLAGS=-Wall -Werror -Wextra -pedantic
 LD_FLAGS=-lncurses -lpcap
 QUIET=@
 APP=isa-top
-SRC=src
-SRCS=$(wildcard $(SRC)/*.cpp)
-OBJS=$(patsubst $(SRC)/%.cpp, $(SRC)/%.o, $(SRCS))
+SRCS=$(wildcard *.cpp)
+OBJS=$(patsubst %.cpp, %.o, $(SRCS))
 
 .PHONY: clean
 
@@ -14,7 +13,7 @@ all: $(APP)
 $(APP): $(OBJS)
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) $^ -o $@
 
-$(OBJ)/%.o: $(SRC)/%.cpp
+%.o: %.cpp
 	$(CXX) $(CXX_FLAGS) -c $^ -o $@
 
 clean:

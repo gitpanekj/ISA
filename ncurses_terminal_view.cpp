@@ -107,9 +107,9 @@ void print_records(std::list<std::pair<FlowKey, FlowStats>> records, const char 
                  src_dst_width, src_dst_width, std::get<0>(addresses).c_str(),
                  src_dst_width, src_dst_width, std::get<1>(addresses).c_str(),
                  (it->first.protocol).c_str(),
-                 add_order_of_magnitude(std::to_string(it->second.rx_bytes)).c_str(),
+                 add_order_of_magnitude(std::to_string(it->second.rx_bytes * 8)).c_str(),
                  add_order_of_magnitude(std::to_string(it->second.rx_packets)).c_str(),
-                 add_order_of_magnitude(std::to_string(it->second.tx_bytes)).c_str(),
+                 add_order_of_magnitude(std::to_string(it->second.tx_bytes * 8)).c_str(),
                  add_order_of_magnitude(std::to_string(it->second.tx_packets)).c_str());
         line++;
     }

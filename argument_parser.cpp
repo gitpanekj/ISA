@@ -1,37 +1,19 @@
-/**
- * @file main.cpp
- * @author Jan Pánek (xpanek11@stud.fit.vut.cz)
- * @brief Application runner file
- * @version 0.1
- * @date 2024-10-03
- *
- * @copyright Copyright (c) 2024
- *
- */
 #include <string>
 #include <stdexcept>
 #include <iostream>
-#include "model.hpp"
-#include "view.hpp"
-#include "controller.hpp"
+#include "argument_parser.hpp"
+#include "flow_table.hpp"
 
-enum class SortKey
-{
-    none = 0,
-    bytes = 1,
-    packets_per_second = 2
-};
-
-struct Config
-{
-    std::string interface; // required
-    SortKey sort_key = SortKey::none;
-    bool help = false;
-};
 
 Config parseArgs(int argc, char *argv[])
 {
     Config config;
+    config.sort_key = SortKey::BYTES;
+    bool sort_key_set = false;
+    bool iface_set = false;
+    bool out_set = false;
+    config.outDirector = "";
+
     for (int i = 1; i < argc; i++)
     {
         std::string arg = argv[i];
@@ -43,13 +25,14 @@ Config parseArgs(int argc, char *argv[])
         }
         else if (arg == "-i")
         {
-            if (!config.interface.empty())
+            if (iface_set)
             {
                 throw std::invalid_argument("Interface already specified");
             }
             if (i < (argc - 1))
             {
                 config.interface = argv[++i];
+                iface_set = true;
             }
             else
             {
@@ -58,38 +41,53 @@ Config parseArgs(int argc, char *argv[])
         }
         else if (arg == "-s")
         {
-            if (config.sort_key != SortKey::none)
+            if (sort_key_set)
             {
                 throw std::invalid_argument("Sort key already specified");
             }
+
             if (i < (argc - 1))
             {
                 std::string key = argv[++i];
                 if (key == "b")
                 {
-                    config.sort_key = SortKey::bytes;
+                    config.sort_key = SortKey::BYTES;
                 }
                 else if (key == "p")
                 {
-                    config.sort_key = SortKey::packets_per_second;
+                    config.sort_key = SortKey::PACKETS;
                 }
-                else
-                {
-                    throw std::invalid_argument("Unknown sort key");
-                }
+                sort_key_set = true;
             }
             else
             {
                 throw std::invalid_argument("Missing sort key after -s");
             }
         }
+        else if (arg == "-d")
+        {
+            if (out_set)
+            {
+                throw std::invalid_argument("Output directory already specified");
+            }
+            if (i < (argc - 1))
+            {
+                std::string key = argv[++i];
+                config.outDirector = key;
+                config.out = true;
+                out_set = true;
+            }
+            else
+            {
+                throw std::invalid_argument("Missing directory path after -d");
+            }
+        }
     }
 
-    if (config.interface.empty())
+    if (!iface_set)
     {
         throw std::invalid_argument("Missing interface");
     }
-
     return config;
 }
 
@@ -99,43 +97,4 @@ void help()
     std::cout << "isa-top -i int [-s b|p]" << std::endl;
     std::cout << "  * -i int: interface to be listened" << std::endl;
     std::cout << "  * -s b|p: output is sorted by bytes/packets/s" << std::endl;
-}
-
-int main(int argc, char *argv[])
-{
-    // Parse args
-    Config config;
-    try
-    {
-        config = parseArgs(argc, argv);
-    }
-    catch (const std::exception &ex)
-    {
-        std::cerr << "Error: " << ex.what() << std::endl;
-        help();
-        return 1;
-    }
-
-    if (config.help) 
-    {
-        help();
-        return 0;
-    }
-
-    
-    // Run app with given config
-    std::cout << "Interface: " << config.interface << std::endl;
-    std::cout << "Sort key: " << int(config.sort_key) << std::endl;
-
-    application::Model model;
-    application::View view;
-    application::Controller controller(model, view);
-
-    int status_code = controller.run_app();
-
-    return status_code;
-
-
-
-    return 0;
 }
