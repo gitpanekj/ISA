@@ -138,7 +138,7 @@ def display(stats, period=1):
             tbps = to_oder_of_magnitude_format(data['tx_bytes'] * 8 / period)
             rpps = to_oder_of_magnitude_format(data['rx_packets'] / period)
             tpbs = to_oder_of_magnitude_format(data['tx_packets'] / period)
-            print(f"{flow_key=} {rbps=} {tbps=} {rpps=} {tpbs=}")
+            print(f"[{flow_key[0]}]:{flow_key[1]} [{flow_key[2]}]:{flow_key[3]} {flow_key[4]} {rbps=} {tbps=} {rpps=} {tpbs=}")
         print("=============================================================")
         
 def main(argv: Optional[Sequence[str]] = None) -> int:
