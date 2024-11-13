@@ -1,3 +1,12 @@
+/**
+ * @file main.cpp
+ * @author Jan Pánek (xpanek11@stud.fit.vut.cz)
+ * @brief Isa-top runner.
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <thread>
 #include <mutex>
 #include <atomic>
@@ -50,21 +59,21 @@ int main(int argc, char *argv[])
 
         std::thread monitor_thread(&FlowMonitor::start, &monitor);
 
-        start_ui();
+        startUI();
 
         while (running)
         {
-            view_data = monitor.get_data();
-            update_view(view_data);
+            view_data = monitor.getData();
+            updateView(view_data, config.refresh_time);
             if (config.out){
-                write_window_to_file(config.outDirector);
+                writeWindowToFile(config.outDirector);
             }
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::seconds(config.refresh_time));
         }
 
         monitor.stop();
         monitor_thread.join();
-        stop_ui();
+        stopUI();
     }
     catch (const std::exception &ex)
     {

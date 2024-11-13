@@ -1,3 +1,12 @@
+/**
+ * @file ncurses_terminal_view.cpp
+ * @author Jan Pánek (xpanek11@stud.fit.vut.cz)
+ * @brief Implementation of ncurses terminal interface.
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "flow_table.hpp"
 #include "ncurses_terminal_view.hpp"
 
@@ -5,6 +14,8 @@
 #include <tuple>
 #include <string>
 #include <fstream>
+#include <cmath>
+#include <iostream>
 
 /* Capture Table
 
@@ -27,6 +38,8 @@ NOTE: if width < 34 dont show proto and Rx
 NOTE: if width < 16 dont show proto and Tx
 */
 
+
+// Macros defining row layout for different screen widths
 //  SRC      DST     Proto     Rx            Tx
 #define SRC_DST_PROTO_RX_TX "%-*.*s  %-*.*s   %-5s   %-6s   %-6s   %-6s   %-6s"
 #define PROTO_RX_TX "%-*.*s%-*.*s%-5s   %-6s   %-6s   %-6s   %-6s"
@@ -34,14 +47,19 @@ NOTE: if width < 16 dont show proto and Tx
 #define TX "%-*.*s%-*.*s%.0s%.0s%.0s%-6s   %-6s"
 #define CLEAR "%-*.*s%-*.*s%.0s%.0s%.0s%.0s"
 
-
-
-void write_window_to_file(const std::string &out) {
+/**
+ * @brief Write current ncurses buffer to the file.
+ * 
+ * @param out output directory path
+ */
+void writeWindowToFile(const std::string &out)
+{
     static int cnt = 0;
     std::string filename = out + "/" + "out-" + std::to_string(cnt) + ".txt";
     cnt++;
     std::ofstream outfile(filename, std::ios::app);
-    if (!outfile) {
+    if (!outfile)
+    {
         return;
     }
 
@@ -49,35 +67,91 @@ void write_window_to_file(const std::string &out) {
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
 
-    for (int i = 0; i < rows; ++i) {
+    for (int i = 0; i < rows; ++i)
+    {
         mvwinstr(stdscr, i, 0, buffer);
         outfile << buffer << std::endl;
     }
     outfile.close();
 }
 
-std::string add_order_of_magnitude(std::string num)
+/**
+ * @brief Convert number of captured bytes in period in number of bits per second.
+ * 
+ * @param bytes number of captured bytes in period
+ * @param period period length
+ * @return double bandwidth
+ */
+double toBitsPerSecond(unsigned long long bytes, unsigned int period)
 {
-    const char* orders_of_magnitude[] = {"","k", "M", "G", "T", "P"};
-    if (num.size() == 0) num = "0";
+    return bytes * 8.0 / (double)period;
+}
 
-    int order = (num.size() - 1) / 3;
-    std::string str_order = order < 6 ? orders_of_magnitude[order] : "X";
+/**
+ * @brief Convert number of captured packets in period in number of packets per second.
+ * 
+ * @param bytes number of captured bytes in period
+ * @param period period length
+ * @return double bandwidth
+ */
+double toPacketsPerSecond(unsigned long long packets, unsigned int period)
+{
+    return (double)packets / (double)period;
+}
 
-    if (order == 0)
+/**
+ * @brief Format measured bandwidth into human readable format
+ * 
+ * @param bandwidth number of bits per second
+ * @return std::string 
+ */
+std::string toOrderOfMagnitudeFormat(double bandwidth)
+{
+    const char *orders_of_magnitude[] = {"", "K", "M", "G", "T", "P"};
+    int order = 0;
+    while (bandwidth >= 1000.0)
     {
-        return num;
+        bandwidth = bandwidth / 1000.0;
+        order++;
     }
-    else
+
+    int int_val = std::round(bandwidth * 10.0);
+    if (int_val == 0)
+        return "0";
+
+    std::string str_val = std::to_string(int_val);
+    std::string str_order = order < 6 ? orders_of_magnitude[order] : "X"; // Orders greater than petabytes are ignored
+
+    
+    if (str_val.size() == 4) // xxx.x[KMGTP]
     {
-        std::string whole_part = num.substr(0, (num.size()-order*3));
-        std::string decimal_part = num.substr(num.size()-order*3, 1);
-        return whole_part + "." + decimal_part + str_order;
+        return str_val.substr(0, 3) + "." + str_val.substr(3,1) + str_order;
+    }
+    else if (str_val.size() == 3) // xx.x[KMGTP]
+    {
+        return str_val.substr(0, 2) + "." + str_val.substr(2,1) + str_order;
+    }
+    else if (str_val.size() == 2) // x.x[KMGTP]
+    {
+        return str_val.substr(0,1) + "." + str_val.substr(1,1) + str_order;
+    }
+    else if (str_val.size() == 1) // 0.x
+    {
+        return "0." + str_val;
+    }
+    else                          // 0.0  
+    {
+        return "0.0";
     }
 }
 
-
-std::tuple<std::string, std::string> get_address_and_port(FlowKey record)
+/**
+ * @brief 
+ * 
+ * @param record 
+ * @return std::tuple<std::string, std::string> 
+ */
+std::tuple<std::string, std::string> toAddressColumnFormat(FlowKey record)
 {
     std::string src;
     std::string dst;
@@ -96,26 +170,40 @@ std::tuple<std::string, std::string> get_address_and_port(FlowKey record)
     return {src, dst};
 }
 
-void print_records(std::list<std::pair<FlowKey, FlowStats>> records, const char *fmt, int src_dst_width)
+/**
+ * @brief Print body of the bandwidth table containing top 10 most communication flows
+ * 
+ * @param records list of top ten communicating flows
+ * @param fmt print format
+ * @param src_dst_width width of address column
+ * @param period capture period
+ */
+void printRecords(std::list<std::pair<FlowKey, FlowStats>> records, const char *fmt, int src_dst_width, unsigned int period)
 {
-    int line = 3;
-    for (auto it = records.rbegin(); it != records.rend(); it++)
+    int line = 3; // first two rows are header
+    for (auto it = records.rbegin(); it != records.rend(); it++) // from max to min
     {
-        std::tuple<std::string, std::string> addresses = get_address_and_port(it->first);
+        std::tuple<std::string, std::string> addresses = toAddressColumnFormat(it->first);
 
         mvprintw(line, 1, fmt,
                  src_dst_width, src_dst_width, std::get<0>(addresses).c_str(),
                  src_dst_width, src_dst_width, std::get<1>(addresses).c_str(),
                  (it->first.protocol).c_str(),
-                 add_order_of_magnitude(std::to_string(it->second.rx_bytes * 8)).c_str(),
-                 add_order_of_magnitude(std::to_string(it->second.rx_packets)).c_str(),
-                 add_order_of_magnitude(std::to_string(it->second.tx_bytes * 8)).c_str(),
-                 add_order_of_magnitude(std::to_string(it->second.tx_packets)).c_str());
+                 (toOrderOfMagnitudeFormat(toBitsPerSecond(it->second.rx_bytes, period))).c_str(),
+                 (toOrderOfMagnitudeFormat(toPacketsPerSecond(it->second.rx_packets, period))).c_str(),
+                 (toOrderOfMagnitudeFormat(toBitsPerSecond(it->second.tx_bytes, period))).c_str(),
+                 (toOrderOfMagnitudeFormat(toPacketsPerSecond(it->second.tx_packets, period))).c_str());
         line++;
     }
 }
 
-void print_header(const char *fmt, int src_dst_width)
+/**
+ * @brief Print table header
+ * 
+ * @param fmt print format
+ * @param src_dst_width width of address column
+ */
+void printHeader(const char *fmt, int src_dst_width)
 {
 
     mvprintw(0, 1, fmt, src_dst_width, src_dst_width, "Src IP:port",
@@ -128,40 +216,60 @@ void print_header(const char *fmt, int src_dst_width)
              "b/s", "p/s", "b/s", "p/s");
 }
 
-void print_table(std::list<std::pair<FlowKey, FlowStats>> records, const char *fmt, int src_dst_width)
+/**
+ * @brief Print header and table body.
+ * 
+ * @param records list of top ten communicating flows
+ * @param fmt print format
+ * @param src_dst_width width of address column
+ * @param period capture period
+ */
+void printTable(std::list<std::pair<FlowKey, FlowStats>> records, const char *fmt, int src_dst_width, unsigned int period)
 {
-    print_header(fmt, src_dst_width);
-    print_records(records, fmt, src_dst_width);
+    printHeader(fmt, src_dst_width);
+    printRecords(records, fmt, src_dst_width, period);
 }
 
-void update_view(std::list<std::pair<FlowKey, FlowStats>> records)
+
+/**
+ * @brief Update ncurses view with table.
+ * 
+ * @param records list of top ten communicating flows
+ * @param period capture period
+ */
+void updateView(std::list<std::pair<FlowKey, FlowStats>> records, unsigned int period)
 {
     clear();
     int screen_width = getmaxx(stdscr);
     if (screen_width < 16) // empty
     {
-        print_table(records, CLEAR, 0);
+        printTable(records, CLEAR, 0, period);
     }
     else if (screen_width < 34) // RX
     {
-        print_table(records, TX, 0);
+        printTable(records, TX, 0, period);
     }
     else if (screen_width < 42) //  TX RX
     {
-        print_table(records, RX_TX, 0);
+        printTable(records, RX_TX, 0, period);
     }
     else if ((screen_width - 48) / 2 < 2) //  PROTO TX RX
     {
-        print_table(records, PROTO_RX_TX, 0);
+        printTable(records, PROTO_RX_TX, 0, period);
     }
     else // Full
     {
-        print_table(records, SRC_DST_PROTO_RX_TX, (screen_width - 48) / 2);
+        printTable(records, SRC_DST_PROTO_RX_TX, (screen_width - 48) / 2, period);
     }
     refresh();
 }
 
-int start_ui()
+/**
+ * @brief Initialize ncurses.
+ * 
+ * @return int 
+ */
+int startUI()
 {
     initscr();
     noecho();
@@ -170,7 +278,12 @@ int start_ui()
     return 0;
 }
 
-int stop_ui()
+/**
+ * @brief Release ncurses resources.
+ * 
+ * @return int 
+ */
+int stopUI()
 {
     endwin();
 

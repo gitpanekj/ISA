@@ -1,3 +1,12 @@
+/**
+ * @file capturing_utils.cpp
+ * @author Jan Pánek (xpanek11@stud.fit.vut.cz)
+ * @brief Utilities for processing of captured packet.
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "capturing_utils.hpp"
 #include "flow_table.hpp"
 
@@ -14,15 +23,19 @@
 #include <memory>
 #include <stdexcept>
 #include <string.h>
+#include <iostream>
 
+// Packet header sizes
 #define ETHER_SIZE 14        // octets
 #define IPV4_BASE_SIZE 20    // octets
 #define IPV6_HEADER_SIZE 40  // octets
 #define IPV6_EXT_HEADER_SIZE // octets
-#define ETHERNET_PAYLOAD(packet) packet + ETHER_SIZE
-#define IPv4_PAYLOAD(ip_packet, ihl) ip_packet + ihl * 4
-#define IPv6_PAYLOAD(ip_packet) ip_packet + IPV6_HEADER_SIZE
 
+/**
+ * @brief Capture structure
+ * 
+ * Holds captured data, current position in the captured data and total size of captured data.
+ */
 struct capture
 {
     capture(const u_char *data_,
@@ -33,58 +46,112 @@ struct capture
     unsigned int caplen;
 };
 
-u_char *capture_from_pos(struct capture cap)
+/**
+ * @brief Get pointer to the capture data with offset pos
+ * 
+ * @param cap capture structure
+ * @return u_char* pointer to the captured data with offset pos
+ */
+u_char *captureFromPos(struct capture cap)
 {
     return (u_char *)(cap.data + cap.pos);
 }
 
-void check_ether(struct capture cap)
+/**
+ * @brief Check whether there is enough data left in the capture for ethernet header.
+ * 
+ * @param cap capture structure
+ */
+void checkEther(struct capture cap)
 {
     if ((cap.pos + ETHER_SIZE) > cap.caplen)
         throw std::runtime_error("Insufficient caplen to process ether frame.");
 }
 
-void skip_ether(struct capture *cap)
+/**
+ * @brief Move to the ethernet payload in the capture.
+ * 
+ * @param cap 
+ */
+void skipEther(struct capture *cap)
 {
     cap->pos += ETHER_SIZE;
 }
 
-void check_ipv4_base_header(struct capture cap)
+
+/**
+ * @brief Check whether there is enough data left in the capture for ipv4 header without options.
+ * 
+ * @param cap 
+ */
+void checkIPv4BaseHeader(struct capture cap)
 {
     if ((cap.pos + IPV4_BASE_SIZE) > cap.caplen)
         throw std::runtime_error("Insufficient caplen to process ipv4 base header.");
 }
 
-void check_ipv4_header(struct capture cap, u_char ihl)
+
+/**
+ * @brief Check whether there is enough data left in the capture for ipv4 header including options.
+ * 
+ * @param cap 
+ */
+void checkIPv4Header(struct capture cap, u_char ihl)
 {
     if ((cap.pos + ihl * 4) > cap.caplen)
         throw std::runtime_error("Insufficient caplen to process ipv4 header.");
 }
 
-void skip_ipv4_header(struct capture *cap, u_char ihl)
+/**
+ * @brief Move to the ipv4 payload in the capture.
+ * 
+ * @param cap 
+ * @param ihl internet header length
+ */
+void skipIPv4Header(struct capture *cap, u_char ihl)
 {
     cap->pos += ihl * 4;
 }
 
-void check_ipv6_base_header(struct capture cap)
+/**
+ * @brief Check whether there is enough data left in the capture for ipv6 header.
+ * 
+ * @param cap 
+ */
+void checkIPv6BaseHeader(struct capture cap)
 {
     if ((cap.pos + IPV6_HEADER_SIZE) > cap.caplen)
         throw std::runtime_error("Insufficient caplen to process ipv6 base header.");
 }
 
-void skip_ipv6_base_header(struct capture *cap)
+/**
+ * @brief Move to the ipv6 payload in the capture.
+ * 
+ * @param cap 
+ */
+void skipIPv6BaseHeader(struct capture *cap)
 {
     cap->pos += IPV6_HEADER_SIZE;
 }
 
-void check_tcp_udp_ports(struct capture cap)
+/**
+ * @brief Check whether there is enough data left in the capture for tcp/udp source and destination port numbers.
+ * 
+ * @param cap 
+ */
+void checkTcpUdpPorts(struct capture cap)
 {
     if ((cap.pos + 4) > cap.caplen)
         throw std::runtime_error("Insufficient caplen to process tcp and udp port numbers.");
 }
 
-
-std::string get_protocol_name_by_number(uint8_t protocol_number)
+/**
+ * @brief Convert protocol number into the string representation.
+ * 
+ * @param protocol_number 
+ * @return std::string 
+ */
+std::string getProtocolNameByNumber(uint8_t protocol_number)
 {
     switch (protocol_number)
     {
@@ -99,24 +166,35 @@ std::string get_protocol_name_by_number(uint8_t protocol_number)
     default:
         return "Unknown";
     }
-    // Return the protocol name as a string
 }
 
-std::pair<uint16_t, uint16_t> get_port_numbers(struct capture cap)
+/**
+ * @brief Extract port numbers from the captured data.
+ * 
+ * @param cap 
+ * @return std::pair<uint16_t, uint16_t> 
+ */
+std::pair<uint16_t, uint16_t> getPortNumbers(struct capture cap)
 {
-    check_tcp_udp_ports(cap);
+    checkTcpUdpPorts(cap);
 
-    const udphdr *udp_tcp_header = (const udphdr *)(capture_from_pos(cap));
+    const udphdr *udp_tcp_header = (const udphdr *)(captureFromPos(cap));
     uint16_t src_port;
     uint16_t dst_port;
     // Save src, dst port
     src_port = ntohs(udp_tcp_header->source);
     dst_port = ntohs(udp_tcp_header->dest);
-    return std::pair(src_port, dst_port);
+    return std::pair<uint16_t, uint16_t>(src_port, dst_port);
 }
 
 
-std::string ipv4_source_address(const struct iphdr *ip_header)
+/**
+ * @brief Extract string representation of ipv4 source address from the captured data.
+ * 
+ * @param ip_header 
+ * @return std::string 
+ */
+std::string ipv4SourceAddress(const struct iphdr *ip_header)
 {
     char *address;
     struct in_addr ipv4_address;
@@ -129,7 +207,13 @@ std::string ipv4_source_address(const struct iphdr *ip_header)
     return std::string(ip4_source);
 }
 
-std::string ipv4_destination_address(const struct iphdr *ip_header)
+/**
+ * @brief Extract string representation of ipv4 destination address from the ipv4 header
+ * 
+ * @param ip_header 
+ * @return std::string 
+ */
+std::string ipv4DestinationAddress(const struct iphdr *ip_header)
 {
     char *address;
     struct in_addr ipv4_address;
@@ -142,17 +226,37 @@ std::string ipv4_destination_address(const struct iphdr *ip_header)
     return std::string(ip4_destination);
 }
 
-std::string ipv4_protocol(const struct iphdr *ip_header)
+
+/**
+ * @brief Extract protocol name from the ipv4 header.
+ * 
+ * @param ip_header 
+ * @return std::string 
+ */
+std::string ipv4Protocol(const struct iphdr *ip_header)
 {
-    return get_protocol_name_by_number(ip_header->protocol);
+    return getProtocolNameByNumber(ip_header->protocol);
 }
 
-uint16_t ipv4_total_length(const struct iphdr *ip_header)
+/**
+ * @brief Extract total length name from the ipv4 packet;
+ * 
+ * @param ip_header 
+ * @return std::string 
+ */
+uint16_t ipv4TotalLength(const struct iphdr *ip_header)
 {
     return ntohs(ip_header->tot_len);
 }
 
-std::string ipv6_source_address(const struct ip6_hdr *ip6_header)
+
+/**
+ * @brief Extract string representation of ipv6 source address from the ipv6 header
+ * 
+ * @param ip_header 
+ * @return std::string 
+ */
+std::string ipv6SourceAddress(const struct ip6_hdr *ip6_header)
 {
     char ip6_address[INET6_ADDRSTRLEN];
     if (inet_ntop(AF_INET6, &(ip6_header->ip6_src), ip6_address, INET6_ADDRSTRLEN) == NULL){
@@ -161,7 +265,13 @@ std::string ipv6_source_address(const struct ip6_hdr *ip6_header)
     return std::string(ip6_address);
 }
 
-std::string ipv6_destination_address(const struct ip6_hdr *ip6_header)
+/**
+ * @brief Extract string representation of ipv6 destination address from the ipv6 header
+ * 
+ * @param ip_header 
+ * @return std::string 
+ */
+std::string ipv6DestinationAddress(const struct ip6_hdr *ip6_header)
 {
     char ip6_address[INET6_ADDRSTRLEN];
 
@@ -171,91 +281,135 @@ std::string ipv6_destination_address(const struct ip6_hdr *ip6_header)
     return std::string(ip6_address);
 }
 
-std::string ipv6_protocol(const struct ip6_hdr *ip6_header)
+
+/**
+ * @brief Extract protocol name from the ipv6 header.
+ * 
+ * @param ip6_header 
+ * @return std::string 
+ */
+std::string ipv6Protocol(const struct ip6_hdr *ip6_header)
 {
-    return get_protocol_name_by_number(ip6_header->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+    return getProtocolNameByNumber(ip6_header->ip6_ctlun.ip6_un1.ip6_un1_nxt);
 }
 
-uint16_t ipv6_total_length(const struct ip6_hdr *ip6_header)
+/**
+ * @brief Extract total length name from the ipv6 packet;
+ * 
+ * @param ip_header 
+ * @return std::string 
+ */
+uint16_t ipv6TotalLength(const struct ip6_hdr *ip6_header)
 {
-    return ntohs(ip6_header->ip6_ctlun.ip6_un1.ip6_un1_plen);
+    return ntohs(ip6_header->ip6_ctlun.ip6_un1.ip6_un1_plen) + 40;
 }
 
-std::pair<FlowKey, uint16_t> process_ipv4(struct capture cap)
+/**
+ * @brief Create pair of flow identification and length of data. ((IPsrc:port, IPdst:port), length)
+ * 
+ * @param cap 
+ * @return std::pair<FlowKey, uint16_t> 
+ */
+std::pair<FlowKey, uint16_t> processIPv4(struct capture cap)
 {
-    check_ipv4_base_header(cap);
+    checkIPv4BaseHeader(cap);
 
-    const iphdr *ip_header = (const iphdr *)(capture_from_pos(cap));
-    std::string source_address = ipv4_source_address(ip_header);
-    std::string destination_address = ipv4_destination_address(ip_header);
-    std::string protocol = ipv4_protocol(ip_header);
-    uint16_t length = ipv4_total_length(ip_header);
+    const iphdr *ip_header = (const iphdr *)(captureFromPos(cap));
+    std::string source_address = ipv4SourceAddress(ip_header);
+    std::string destination_address = ipv4DestinationAddress(ip_header);
+    std::string protocol = ipv4Protocol(ip_header);
+    uint16_t length = ipv4TotalLength(ip_header);
     std::tuple<uint16_t, uint16_t> src_dst_port = {0, 0}; // by default 0 - unused
 
     // TCP, UDP
     if ((ip_header->protocol == IPPROTO_TCP) || (ip_header->protocol == IPPROTO_UDP))
     {
-        check_ipv4_header(cap, ip_header->ihl);
-        skip_ipv4_header(&cap, ip_header->ihl);
-        src_dst_port = get_port_numbers(cap);
+        checkIPv4Header(cap, ip_header->ihl);
+        skipIPv4Header(&cap, ip_header->ihl);
+        src_dst_port = getPortNumbers(cap);
     }
 
     return {FlowKey(source_address, std::get<0>(src_dst_port), destination_address, std::get<1>(src_dst_port), protocol, IpAddrClass::IPV4), length};
 }
 
-std::pair<FlowKey, uint16_t> process_ipv6(struct capture cap)
+/**
+ * @brief Create pair of flow identification and length of data. ((IPsrc:port, IPdst:port), length)
+ * 
+ * @param cap 
+ * @return std::pair<FlowKey, uint16_t> 
+ */
+std::pair<FlowKey, uint16_t> processIPv6(struct capture cap)
 {
-    check_ipv6_base_header(cap);
+    checkIPv6BaseHeader(cap);
 
-    const ip6_hdr *ip6_header = (const ip6_hdr *)(capture_from_pos(cap));
-    std::string source_address = ipv6_source_address(ip6_header);
-    std::string destination_address = ipv6_destination_address(ip6_header);
-    std::string protocol = ipv6_protocol(ip6_header); // TODO: extension headers
-    uint16_t length = ipv6_total_length(ip6_header);
+    const ip6_hdr *ip6_header = (const ip6_hdr *)(captureFromPos(cap));
+    std::string source_address = ipv6SourceAddress(ip6_header);
+    std::string destination_address = ipv6DestinationAddress(ip6_header);
+    std::string protocol = ipv6Protocol(ip6_header); // TODO: extension headers
+    uint16_t length = ipv6TotalLength(ip6_header);
     std::tuple<uint16_t, uint16_t> src_dst_port = {0, 0}; // by default 0 - unused
 
     uint8_t protocol_number = ip6_header->ip6_ctlun.ip6_un1.ip6_un1_nxt;
     if ((protocol_number == IPPROTO_TCP) || (protocol_number == IPPROTO_UDP))
     {
-        skip_ipv6_base_header(&cap);
-        src_dst_port = get_port_numbers(cap);
+        skipIPv6BaseHeader(&cap);
+        src_dst_port = getPortNumbers(cap);
     }
 
     return {FlowKey(source_address, std::get<0>(src_dst_port), destination_address, std::get<1>(src_dst_port), protocol, IpAddrClass::IPV6), length};
 }
 
+/**
+ * @brief Processes the captured packet.
+ * 
+ * Identifies flow the packet belongs to and update the flow table accordingly.
+ * 
+ * @param args 
+ * @param packet_header 
+ * @param packet 
+ */
 void packet_handler(u_char *args, const struct pcap_pkthdr *packet_header, const u_char *packet)
 {
-    if (args == NULL)
+    if (args == nullptr)
     {
-        // TODO: error msg
+        // TODO: better termination
+        std::cerr << "Error: args passed to the packet_handler is NULL" << std::endl;
         exit(1);
     }
     void **args_ = (void **)args;
+    if (args_[0] == nullptr || args_[1] == nullptr)
+    {
+        std::cerr << "Error: invalid content of args" << std::endl;
+        exit(1);
+    }
     void *arg1 = args_[0];
     void *arg2 = args_[1];
     FlowTable *table = (FlowTable *) arg1;
     pcap_t* handle = (pcap_t*) arg2;
+    if (table == nullptr || handle == nullptr)
+    {
+        std::cerr << "Error: either of passed arguments is null" << std::endl;
+        exit(1);
+    }
 
     std::pair<FlowKey, uint16_t> capture({FlowKey("", 0, "", 0, "", IpAddrClass::IPV4), 0});
 
     struct capture cap(packet, 0, packet_header->caplen);
 
     try {
-        // Check whether whole MAC header is contained
-        check_ether(cap);
+        checkEther(cap);
         struct ether_header *eth_header;
-        eth_header = (struct ether_header *)capture_from_pos(cap);
+        eth_header = (struct ether_header *)captureFromPos(cap);
 
         switch (ntohs(eth_header->ether_type))
         {
         case ETHERTYPE_IP:
-            skip_ether(&cap);
-            capture = process_ipv4(cap);
+            skipEther(&cap);
+            capture = processIPv4(cap);
             break;
         case ETHERTYPE_IPV6:
-            skip_ether(&cap);
-            capture = process_ipv6(cap);
+            skipEther(&cap);
+            capture = processIPv6(cap);
             break;
         default:
             return;
@@ -276,7 +430,5 @@ void packet_handler(u_char *args, const struct pcap_pkthdr *packet_header, const
         return;
 
     // Update the table
-    table->add_or_update_record(capture.first, capture.second);
+    table->addOrUpdateRecord(capture.first, capture.second);
 }
-
-

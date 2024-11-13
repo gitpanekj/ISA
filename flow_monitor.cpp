@@ -1,3 +1,12 @@
+/**
+ * @file flow_monitor.cpp
+ * @author Jan Pánek (xpanek11@stud.fit.vut.cz)
+ * @brief Class implementing packet capturing and flow identification.
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <pcap.h>
 #include <iostream>
 #include <string.h>
@@ -12,6 +21,12 @@
 #define UNLIMITED 0
 
 
+/**
+ * @brief Construct a new Flow Monitor:: Flow Monitor object
+ * 
+ * @param interface interface to capture packets on
+ * @param key key used to sort value in flow table - Bytes | Packets
+ */
 FlowMonitor::FlowMonitor(const char *interface, SortKey key)
 {
     char error_buffer[PCAP_ERRBUF_SIZE];
@@ -30,9 +45,13 @@ FlowMonitor::FlowMonitor(const char *interface, SortKey key)
         std::string err = std::string(error_buffer, PCAP_ERRBUF_SIZE);
         throw std::invalid_argument(err);
     }
-    table.set_sort_key(key);
+    table.setSortKey(key);
 }
 
+/**
+ * @brief Start capturing loop with given packet_handler.
+ * 
+ */
 void FlowMonitor::start()
 {
     void *args[2] = {&table, &handle};
@@ -44,6 +63,10 @@ void FlowMonitor::start()
     }
 }
 
+/**
+ * @brief Stop capturing loop.
+ * 
+ */
 void FlowMonitor::stop()
 {
     if (handle != nullptr)
@@ -54,7 +77,12 @@ void FlowMonitor::stop()
     handle = nullptr;
 }
 
-std::list<std::pair<FlowKey, FlowStats>> FlowMonitor::get_data()
+/**
+ * @brief Get gathered flow statistics from the FlowMonitor FlowTable.
+ * 
+ * @return std::list<std::pair<FlowKey, FlowStats>> 
+ */
+std::list<std::pair<FlowKey, FlowStats>> FlowMonitor::getData()
 {
-    return table.get_statistics();
+    return table.getStatistics();
 }
