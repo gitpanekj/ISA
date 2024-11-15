@@ -17,7 +17,7 @@ $(APP): $(OBJS)
 	$(CXX) $(CXX_FLAGS) -c $< -o $@
 
 tar:
-	tar cf xpanek11.tar argument_parser.cpp argument_parser.hpp capturing_utils.cpp capturing_utils.hpp flow_monitor.cpp flow_monitor.hpp flow_table.cpp flow_table.hpp main.cpp ncurses_terminal_view.cpp ncurses_terminal_view.hpp isa-top.1 Makefile manual.pdf
+	tar cf xpanek11.tar argument_parser.cpp argument_parser.hpp capturing_utils.cpp capturing_utils.hpp flow_monitor.cpp flow_monitor.hpp flow_table.cpp flow_table.hpp main.cpp ncurses_terminal_view.cpp ncurses_terminal_view.hpp isa-top.1 Makefile manual.pdf ./tests/capture_test.py ./tests/iftop_compare_test.py ./tests/isatop_single.py ./tests/captures
 
 clean:
 	rm $(OBJS) $(APP)

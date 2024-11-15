@@ -1,21 +1,113 @@
-### Projekt ISA - 2024 - isa-top
-- jméno a příjmení: Jan Pánek
-- login: xpanek11
-- datum vytvoření: 3. října 2024
+.TH ISA-TOP 1
+.SH NAME
+isa-top \-  display bandwidth usage and number of transferred packets on an interface by host
 
-#### Nástroj isa-top
-...
-- **TODO**: popis - viz dokumentace
-- **TODO**: spuštění
+.SH SYNOPSIS
+.B isa-top
+\fB\-h\fR
+|
+\fB\-i\fR \fIinterface\fR
+[\fB\-s\fR \fIb\fR|\fIp\fR]
+[\fB\-t\fR \fIperiod\fR]
+[\fB\-d\fR \fIoutdir\fR]
 
 
-##### Omezení
-...
+.SH DESCRIPTION
+\fBisa-top\fR listens to network traffic on the specified interface and displays a table
+of current bandwidth usage by flows identified by either five-tuple (SrcIP:port, DstIp:port, protocol)
+for TCP and UDP communications or three tuple (SrcIP, DstIp, protocol) for ICMP and ICMPv6 messages.
+Monitoring of communications involving other protocols than TCP,UDP,ICMP, ICMPv6 is not supported.
+\fBisa-top\fR must be run with sufficient permissions to monitor all network traffic on the \fIinterface\fR.
 
-##### Rozšíření
-...
+By default \fBisa-top\fR displays top ten communicating flows sorted by  number of
+of transferred bytes per \fIperiod\fR.
+Sorting key may be altered by using \fB-s\fR option.
 
-#### Odevzdané soubory
-- Makefile
-- README.md
-- manual.pdf
+.SH OPTIONS
+.TP
+\fB-h\fR
+Print a summary of usage.
+
+.TP
+\fB-i\fR \fIinterface\fR
+Listen to packets on \fIinterface\fR.
+
+.TP
+\fB-s\fR \fIb\fR|\fIp\fR
+Sort the displayed flows:
+.RS
+.IP \fIb\fR
+Sort by number of transferred bytes per \fIperiod\fR(default).
+.IP \fIp\fR
+Sort by number of transferred packets per \fIperiod\fR.
+.RE
+
+.TP
+\fB-t\fR \fIperiod\fR
+Set the update interval, in seconds, for refreshing the displayed statistics. The default is 1 second.
+
+.TP
+\fB-d\fR \fIoutdir\fR
+Specify the directory where monitoring output will be saved.
+
+
+.SH DISPLAY
+When running, \fBisa-top\fR uses the whole screen to display network usage.
+The main part of the display lists , for each flow,
+flow identification in form of SrcIP:port, DstIp:port, protocol
+(port columns are empty if protocol specifies icmp message).
+The direction of data flow is determined by Rx and Tx columns,
+Rx column contains number of received bits and packets per second (b/s, p/s) by host with src:port (e.g. transmitted by host width dst:port).
+Tx column contains number of transmitted bits and packets per second (b/s, p/s) by host with dst:port (e.g. transmitted by host width src:port).
+Units bps and pps are displayed in human readable format involving K (kilo), M (mega), G (giga) and rounded to one decimal place.
+
+By default \fBisa-top\fR sorts the flows by the number of transferred bytes per \fIperiod\fR.
+For instance,
+
+Src IP:port        Dst IP:port        Proto   Rx                Tx              
+                                              b/s      p/s      b/s      p/s    
+172.16.4.107:33986 147.229.9.81:1194  udp     1.3K     1.0      2.3K     2.0  
+
+shows UDP traffic from \fB172.16.4.107:33986\fR to \fB147.229.9.81:1194\fR in the preceding 1 second.
+\fB1.3k bytes\fR in \fB1 packet\fR was transmitted from \fB147.229.9.81:1194\fR to \fB172.16.4.107:33986\fR.
+\fB2.3k bytes\fR in \fB2 packets\fR was transmitted from \fB172.16.4.107:33986\fR to \fB147.229.9.81:1194\fR.
+
+.SH EXAMPLES
+.TP
+Monitor traffic on \fBeth0\fR, sorted by number of transmitted bytes:
+.RS
+.B
+isa-top \-i eth0
+.RE
+
+.TP
+Monitor traffic on \fBwlan0\fR, sorted by packet count, refreshing every 2 seconds:
+.RS
+.B
+isa-top \-i wlan0 \-s p \-t 2
+.RE
+
+.TP
+Monitor traffic on \fBeth0\fR and save output to /tmp/isa-top-logs:
+.RS
+.B
+isa-top \-i eth0 \-d /tmp/isa-top-logs
+.RE
+
+
+
+.SH AUTHOR
+Jan Pánek <xpanek11@stud.fit.vut.cz>
+
+.SH SEE ALSO
+.B iftop
+(1)
+
+.SH COPYRIGHT
+Copyright (c) 2024 Jan Pánek <xpanek11@stud.fit.vut.cz>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
