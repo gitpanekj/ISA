@@ -1,4 +1,4 @@
 *.o
 .vscode/
-tests/test_results/**
+tests/test_results
 tests/run.py
