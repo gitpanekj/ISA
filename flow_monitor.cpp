@@ -56,11 +56,7 @@ void FlowMonitor::start()
 {
     void *args[2] = {&table, &handle};
     
-    int status = pcap_loop(handle, UNLIMITED, packet_handler, (u_char *)&args);
-    if (status == -1)
-    {
-        throw std::runtime_error(std::string(pcap_geterr(handle)));
-    }
+    pcap_loop(handle, UNLIMITED, packet_handler, (u_char *)args);
 }
 
 /**

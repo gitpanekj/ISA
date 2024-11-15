@@ -13,11 +13,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 1
 
     isatop = subprocess.Popen(["sudo", "../isa-top", "-i", "lo", "-s", "b", "-t", "1", "-d", f"./test_results/{pcap_file.split('.')[0].split('/')[1]}_1sec"])
-    time.sleep(0.95)
     tcpreplay = subprocess.Popen(["sudo", "tcpreplay", "--intf1=lo", pcap_file])
 
-    time.sleep(2)
+    
     tcpreplay.wait()
+    
+    time.sleep(2)
     isatop.terminate()
     
     # process results

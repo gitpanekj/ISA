@@ -1,3 +1,4 @@
 *.o
 .vscode/
-prototypes
+tests/test_results/**
+tests/run.py

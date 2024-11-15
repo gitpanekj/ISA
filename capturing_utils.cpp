@@ -372,7 +372,6 @@ void packet_handler(u_char *args, const struct pcap_pkthdr *packet_header, const
 {
     if (args == nullptr)
     {
-        // TODO: better termination
         std::cerr << "Error: args passed to the packet_handler is NULL" << std::endl;
         exit(1);
     }
